@@ -349,12 +349,21 @@ class TwampySessionSender(UdpSession):
                 log.info("Sent to %s [sseq=%d]", self.remote_addr, idx)
 
                 idx = idx + 1
-                if schedule > t1:
-                    r, w, e = select.select([self.socket], [], [], schedule - t1)
 
             if t1 > endtime:
                 log.info("Receive timeout for last packet (don't wait anymore)")
                 self.running = False
+
+            # Block until the next probe deadline (or wake early when a reply
+            # arrives). Waiting only right after a send is not enough: the
+            # arriving reply makes that select return after one RTT, and the
+            # loop then spins on the zero-timeout select above until the next
+            # deadline, burning (interval - RTT) of CPU every interval.
+            if self.running:
+                wait_until = schedule if idx < self.count else endtime
+                timeout = wait_until - now()
+                if timeout > 0:
+                    select.select([self.socket], [], [], timeout)
 
         self.stats.dump(idx)
 

@@ -667,7 +667,7 @@ def twamp_controller(args):
     client = TwampyControlClient(server=rip, ipversion=ipv)
     client.connectionSetup()
 
-    if client.reqSession(s_port=spt, r_port=rpt):
+    if client.reqSession(s_port=spt, r_port=rpt, padding=max(args.padding, 0)):
         client.startSessions()
 
         sender = TwampySessionSender(args)
